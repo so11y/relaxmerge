@@ -76,10 +76,16 @@ export function customize(
   return createNode({ mode: Strategy.Customize, field: { custom } });
 }
 
-/** 迁移字段：把 config 上 beforePath 处的值搬到本 path（可选再按 anyUse 合并）。 */
-export function moveField(beforePath: string, anyUse?: MergeMap)
-export function moveField(beforePath: string, anyUse?: Omit<Strategy, "Skip" | "Customize"> | boolean)
-export function moveField(beforePath: string, anyUse: any = false) {
+/**
+ * 迁移字段：把 config 上 `beforePath` 处的值搬到本 path。
+ *
+ * @param beforePath 源值在 config 上的路径（源缺失时回退到本 path 的 configValue，仍无则保留本 path 的 ownValue）。
+ * @param mergeRule  可选。省略时直接用搬来的源值覆盖；给出「合并规则」（MergeMap 或 Strategy 枚举）
+ *                   时，会把源值按该规则再和目标已有值合并一次（相当于「搬完再 merge 一道」）。
+ */
+export function moveField(beforePath: string, mergeRule?: MergeMap)
+export function moveField(beforePath: string, mergeRule?: Omit<Strategy, "Skip" | "Customize"> | boolean)
+export function moveField(beforePath: string, mergeRule: any = false) {
   return createNode({
     mode: Strategy.Customize,
     field: {
@@ -89,9 +95,9 @@ export function moveField(beforePath: string, anyUse: any = false) {
 
         if (isNil(source)) return ownValue;
 
-        if (isNumber(anyUse) || isObject(anyUse)) {
+        if (isNumber(mergeRule) || isObject(mergeRule)) {
           return merge(
-            { dummyHead: anyUse } as MergeMap,
+            { dummyHead: mergeRule } as MergeMap,
             { dummyHead: source },
             { dummyHead: ownValue }
           ).dummyHead

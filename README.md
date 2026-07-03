@@ -242,12 +242,33 @@ merge(
 // { a: 15 }
 ```
 
-### `moveField(beforePath, anyUse?)`
+### `moveField(beforePath, mergeRule?)`
 
-Move a value from another path into this one; optionally re-merge with a map or strategy.
+Relocate a value from another path in the source into the current field. Use it
+for renamed/moved config keys — pull `beforePath` from `config` and drop it here.
+
+- `beforePath`: where to read the value from in `config`. If it is missing,
+  falls back to this field's own `config` value, then to the existing `own` value.
+- `mergeRule` (optional): when omitted, the moved value simply overwrites. When
+  you pass a merge rule (a `MergeMap` or a `Strategy`), the moved value is merged
+  once more into the destination's existing value using that rule.
 
 ```ts
-merge({ dest: moveField("srcVal") }, { srcVal: 42, dest: 0 }, { dest: 1 }); // { dest: 42 }
+// plain move: pull `srcVal` into `dest`
+merge({ dest: moveField("srcVal") }, { srcVal: 42, dest: 0 }, { dest: 1 });
+// { dest: 42 }
+
+// move then re-merge the two objects with a rule
+merge(
+  { dest: moveField("src", { inner: Strategy.Relax }) },
+  { src: { inner: 7 }, dest: {} },
+  { dest: {} }
+);
+// { dest: { inner: 7 } }
+
+// flatten a deeply nested source path up to here
+merge({ contactEmail: moveField("meta.contact.email") }, { meta: { contact: { email: "ops@corp.com" } } }, {});
+// { contactEmail: "ops@corp.com" }
 ```
 
 ### `road(pattern, options?)`
