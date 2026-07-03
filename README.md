@@ -182,12 +182,24 @@ merge({ a: Strategy.Replace }, { a: 1 }, { a: 2 }); // { a: 1 }
 
 ### `pick(options, obj)`
 
-Filter a single object by include/exclude globs; returns the kept part.
+Filter a single object by include/exclude globs and get the kept part back.
+`pick` is the standalone form of `filter`: it takes the same `FilterOptions`
+(`includes` / `excludes` / `stated` / `mergeMap`) but you do not write a `merge`
+call or a wrapper key yourself — use it whenever you just want to strip/keep
+fields on one object.
 
 ```ts
 pick({ excludes: "secret.**" }, { keep: 1, secret: { token: "x" } });
 // { keep: 1 }
+
+pick({ includes: ["user.*"] }, { user: { name: "a", pw: "x" }, other: 1 });
+// { user: { name: "a", pw: "x" } }
 ```
+
+Note: `filter` itself is a node and must live under a key inside a `merge`
+(`merge({ x: filter(...) }, ...)`). To filter at the top level of an object with
+no merge around it, reach for `pick` — do not pass a bare `filter(...)` as the
+whole merge map.
 
 ### `relax(map)` / `strict(map)`
 
