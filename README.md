@@ -404,15 +404,45 @@ merge(
 // }
 ```
 
-## TypeScript, ESM & CJS
+### 6. Compose freely: nodes inside nodes
 
-Written in TypeScript with bundled `.d.ts`. Works from both `import` and
-`require`:
+Every node (`relax` / `strict` / `filter` / `customize` / `moveField`) is just a
+value in a `MergeMap`, so they nest arbitrarily. A `filter` routes specific
+fields to other nodes through its `mergeMap`, and a `customize` callback is plain
+code — call `merge` / `pick` / build a `filter` inside it if you want:
 
 ```ts
-import { merge } from "relaxmerge"; // ESM
-const { merge } = require("relaxmerge"); // CJS
+import { merge, filter, strict, customize, Strategy } from "relaxmerge";
+
+merge(
+  {
+    cfg: filter({
+      includes: ["**"], // see the note below — use ** to reach nested fields
+      mergeMap: {
+        user: strict({ name: Strategy.Replace }),                    // filter -> strict
+        score: customize(({ ownValue, configValue }) => ownValue * configValue), // filter -> customize
+        inner: filter({ includes: ["**"], excludes: ["pw"] }),       // filter -> filter
+      },
+    }),
+  },
+  { cfg: { keep: "r", user: { name: "R", extra: "x" }, score: 3, inner: { a: "R", pw: "R" } } },
+  { cfg: { keep: "l", user: { name: "l" },            score: 4, inner: { a: "l", pw: "keep" } } }
+);
+// {
+//   cfg: {
+//     keep: "r",
+//     user: { name: "R" },        // strict dropped `extra`
+//     score: 12,                  // customize: 3 * 4
+//     inner: { a: "R", pw: "keep" }, // inner filter kept `pw` out
+//   },
+// }
 ```
+
+> Gotcha: a `filter`'s `includes` / `excludes` keep applying to its **entire
+> subtree**. Use `**` (not `*`) in `includes` when you nest deeper, otherwise
+> deep fields never match the include rule and get dropped before your nested
+> nodes ever see them.
+
 
 ## Testing
 
@@ -433,6 +463,3 @@ npm run typecheck  # tsc --noEmit
 npm test
 ```
 
-## License
-
-MIT
