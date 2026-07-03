@@ -15,9 +15,12 @@ export function strict(mergeMap: MergeMap) {
   return createNode({ mode: Strategy.Strict, map: mergeMap });
 }
 
+/** include/exclude 的单条规则：字符串 glob，或已编译好的 Road（可携带 customize 谓词）。 */
+export type FilterRule = string | Road;
+
 export interface FilterOptions {
-  includes?: string[] | string,
-  excludes?: string[] | string,
+  includes?: FilterRule[] | FilterRule,
+  excludes?: FilterRule[] | FilterRule,
   stated?: Strategy.Strict | Strategy.Relax,
   mergeMap?: MergeMap
 }
@@ -27,6 +30,11 @@ export function filter(userOption?: FilterOptions) {
 
   const includesNormalized = Array.isArray(userOption?.includes) ? userOption.includes : [userOption?.includes ?? '**']
   const excludesNormalized = Array.isArray(userOption?.excludes) ? userOption.excludes : [userOption?.excludes]
+
+  // 规则按挂载 path 前缀化后再编译。传入的是 Road 时取其 pattern/options 重编译，
+  // 以便保留 {customize()} 等需要 options 的 token，同时仍享受相对路径前缀。
+  const compileAt = (path: string) => (rule: FilterRule | undefined) =>
+    rule instanceof Road ? road(`${path}.${rule.pattern}`, rule.options) : road(`${path}.${rule}`)
 
   // include/exclude 规则在挂载时才知道 currentPath，故 road 编译推迟到 onMounted。
   const defaultOption = {
@@ -40,8 +48,8 @@ export function filter(userOption?: FilterOptions) {
     map: defaultOption.mergeMap,
     field: {
       onMounted({ path, normalizedMap }) {
-        defaultOption.includes = includesNormalized.map(i => road(`${path}.${i}`))
-        defaultOption.excludes = userOption?.excludes ? excludesNormalized.map(i => road(`${path}.${i}`)) : []
+        defaultOption.includes = includesNormalized.map(compileAt(path))
+        defaultOption.excludes = userOption?.excludes ? excludesNormalized.map(compileAt(path)) : []
         defaultOption.mergeMap = normalizedMap
       },
       // 直接返回子字段的 spec（用户显式子 map 优先，否则默认策略），或 DROP 丢弃。

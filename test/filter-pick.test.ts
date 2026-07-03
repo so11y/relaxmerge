@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { merge, pick, filter, Strategy } from "../src/index.js";
+import { merge, pick, filter, road, Strategy } from "../src/index.js";
 
 describe("pick (filter via include/exclude)", () => {
   it("keeps everything by default", () => {
@@ -36,6 +36,22 @@ describe("pick (filter via include/exclude)", () => {
         { settings: { theme: "dark", language: "zh", password: "secret", notifications: true } }
       )
     ).toEqual({ settings: { theme: "dark", language: "zh", notifications: true } });
+  });
+
+  it("accepts a prebuilt Road (with a {customize()} predicate) in includes", () => {
+    const evenKeys = road("{customize(even)}", { customize: { even: (v) => +v % 2 === 0 } });
+    expect(pick({ includes: [evenKeys] }, { 0: "a", 1: "b", 2: "c", 3: "d" })).toEqual({
+      0: "a",
+      2: "c",
+    });
+  });
+
+  it("accepts a prebuilt Road in excludes", () => {
+    const oddKeys = road("{customize(odd)}", { customize: { odd: (v) => +v % 2 === 1 } });
+    expect(pick({ excludes: [oddKeys] }, { 0: "a", 1: "b", 2: "c" })).toEqual({
+      0: "a",
+      2: "c",
+    });
   });
 });
 

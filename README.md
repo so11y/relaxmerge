@@ -190,6 +190,8 @@ filter({ includes: ["settings.*"], excludes: ["settings.password"], stated: Stra
 ```
 
 `options`: `{ includes?, excludes?, stated?: Strategy.Strict | Strategy.Relax, mergeMap? }`.
+`includes` / `excludes` accept a string glob or a prebuilt `Road` (or an array of
+either).
 
 ### `customize(fn)`
 
@@ -263,7 +265,18 @@ evenIndex.test("a.4"); // true
 evenIndex.test("a.5"); // false
 ```
 
-These same patterns drive `filter` / `pick` under `includes` and `excludes`.
+These same patterns drive `filter` / `pick` under `includes` and `excludes`. A
+string rule is compiled for you; to use a token that needs options (like
+`{customize()}`), pass a prebuilt `Road` instead — its pattern is still resolved
+relative to the field being filtered:
+
+```ts
+import { pick, road } from "relaxmerge";
+
+const evenKeys = road("{customize(even)}", { customize: { even: v => +v % 2 === 0 } });
+pick({ includes: [evenKeys] }, { 0: "a", 1: "b", 2: "c", 3: "d" });
+// { 0: "a", 2: "c" }
+```
 
 ## Recipes
 
