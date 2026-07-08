@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { merge, relax, strict, Strategy } from "../src/index.js";
 
 describe("relax / strict nesting", () => {
-  it("relax node drills into config-side structure", () => {
+  it("relax node materializes own container and walks configured branch", () => {
     expect(
       merge(
         { root: relax({ deep: Strategy.Relax }) },

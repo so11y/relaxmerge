@@ -1,4 +1,14 @@
-import { MergeState } from "./utils/mergeState.js";
+import { FieldConfig, MergeState } from "./utils/mergeState.js";
+import type { MergeCtx } from "./core/ctx.js";
+import type { MergeSite } from "./core/site.js";
+
+export type { MergeCtx } from "./core/ctx.js";
+
+/** 一次 merge 调用的用户上下文（如 mergeFiltered 写入的 scope）。 */
+export interface MergeCallContext {
+  /** 内部挂载前缀（mergeFiltered 固定为 dumbNode），供 moveField 等解析相对路径。 */
+  scope?: string;
+}
 
 export interface CustomizeContext {
   path: string;
@@ -8,6 +18,21 @@ export interface CustomizeContext {
   ownValue: any;
   state: MergeState;
   mergeNested: (root: any, ownData: any, outsideData: any, path: string,) => void;
+}
+
+/** 每层合并现场：Customize / moveField 回调可读的完整上下文。 */
+export interface MergeSiteContext extends CustomizeContext {
+  ctx: MergeCtx;
+  /** 进入回调时的 site 快照，不随 mergeNested 改变。 */
+  site: MergeSite;
+  scope?: string;
+  mode?: Strategy;
+  submap?: MergeMap;
+  filter?: FieldConfig;
+  od?: any;
+  cd?: any;
+  selected: boolean;
+  enclosed: boolean;
 }
 
 export type NodeType = {
@@ -38,17 +63,5 @@ export enum Strategy {
 export interface MergeOptions {
   callback?: (key: string, value: any) => void;
   state?: MergeState;
-}
-
-/**
- * 一次合并调用期间的共享上下文：config/own 是两侧数据的根，options/state 全程不变。
- * 所有随位置变化的信息都装进 Frame 沿递归显式传递，运行时不再有 path→config 边表
- * 搭桥（field 沿 mount 返回值 / resolve 结果流动，子 spec 沿 resolveChild
- * 返回值流动）。唯一的共享可变状态是输出 own 本身。
- */
-export interface MergeCtx {
-  config: any;
-  own: any;
-  options: MergeOptions;
-  state: MergeState;
+  context?: MergeCallContext;
 }

@@ -160,15 +160,16 @@ A `MergeMap` mirrors the shape of your data. Each key maps to one of:
 | `Strategy.MergeProto` | Deep-merge `own` and `config` at this path (via lodash `merge`).                  |
 | `Strategy.Skip`       | Do not write; report the config value through `options.callback(key, value)`.     |
 | `Strategy.Strict`     | Drill by the **own** side; only fill keys `own` already has.                      |
-| `Strategy.Relax`      | Drill by the **config** side; array lengths may differ. Overwrites existing keys. |
+| `Strategy.Relax`      | Also drills by **own**; when walking children, unions own + config keys. May add missing **selected** leaves from config. Overwrites existing keys. |
 | `Strategy.Customize`  | Hand the field to your callback (built with `customize`).                         |
 
-Strict vs Relax in one line: Strict respects the destination's shape, Relax
-follows the source's shape.
+Strict vs Relax in one line: Strict only follows keys the destination already
+has; Relax also walks extra keys present on the source (and may materialize
+missing selected leaves).
 
 ## API
 
-All nine exports:
+All public exports:
 
 ### `merge(map, config, own, options?)`
 
@@ -178,7 +179,47 @@ Selectively pull fields from `config` into `own`.
 merge({ a: Strategy.Replace }, { a: 1 }, { a: 2 }); // { a: 1 }
 ```
 
-`options`: `{ callback?(key, value): void; state?: MergeState }`.
+`options`: `{ callback?(key, value): void; state?: MergeState; context?: { scope?: string } }`.
+
+`context.scope` is used by helpers such as `mergeFiltered` so `moveField` can
+resolve **relative** source paths (see below).
+
+### `mergeFiltered(filterOpts, remote, local)`
+
+Merge with a `filter` rule without writing the `dumbNode` wrapper yourself.
+Internally wraps both sides under `dumbNode` and sets `context.scope` so
+`moveField('name')` resolves to `dumbNode.name`.
+
+```ts
+import { mergeFiltered, filter, moveField } from "relaxmerge";
+
+const out = mergeFiltered(
+  {
+    excludes: ["name"],
+    mergeMap: {
+      user: { name: moveField("name") } // relative to dumbNode scope
+    }
+  },
+  { name: "张三" },
+  { user: { name: "" } }
+);
+// { user: { name: "张三" } }
+```
+
+Equivalent manual form (still supported):
+
+```ts
+merge(
+  {
+    dumbNode: filter({
+      excludes: ["name"],
+      mergeMap: { user: { name: moveField("dumbNode.name") } }
+    })
+  },
+  { dumbNode: { name: "张三" } },
+  { dumbNode: { user: { name: "" } } }
+);
+```
 
 ### `pick(options, obj)`
 
@@ -231,7 +272,15 @@ either).
 
 ### `customize(fn)`
 
-Take full control of a field. `fn` receives `{ path, own, config, configValue, ownValue, state, mergeNested }`.
+Take full control of a field. `fn` receives a context object with at least
+`{ path, own, config, configValue, ownValue, state, mergeNested }`, plus
+`{ ctx, site, scope?, mode?, submap?, filter?, od?, cd?, selected, enclosed }`
+when you need the full merge site snapshot.
+
+`mergeNested(root, ownData, outsideData, nestedPath)` runs a nested merge at
+`nestedPath` while the callback is active. Capture `path` / `site` at the start
+of your callback if you need them after calling `mergeNested` — `ctx.site` is a
+mutable pointer and moves with nested work.
 
 ```ts
 merge(
@@ -247,8 +296,11 @@ merge(
 Relocate a value from another path in the source into the current field. Use it
 for renamed/moved config keys — pull `beforePath` from `config` and drop it here.
 
-- `beforePath`: where to read the value from in `config`. If it is missing,
-  falls back to this field's own `config` value, then to the existing `own` value.
+- `beforePath`: where to read the value from in `config`. When `options.context.scope`
+  is set (as in `mergeFiltered`), a path without dots is resolved relative to that
+  scope — `moveField("name")` reads `dumbNode.name`. Otherwise `beforePath` is
+  absolute on the config root. If the source path is missing, falls back to this
+  field's own `config` value, then to the existing `own` value.
 - `mergeRule` (optional): when omitted, the moved value simply overwrites. When
   you pass a merge rule (a `MergeMap` or a `Strategy`), the moved value is merged
   once more into the destination's existing value using that rule.
@@ -475,6 +527,30 @@ merge(
 > subtree**. Use `**` (not `*`) in `includes` when you nest deeper, otherwise
 > deep fields never match the include rule and get dropped before your nested
 > nodes ever see them.
+
+### 7. Relocate a field with `mergeFiltered` + `moveField`
+
+When the remote payload has a flat field but local expects it nested — exclude the
+old path, then move it with a relative `moveField` under `mergeFiltered`:
+
+```ts
+import { mergeFiltered, moveField } from "relaxmerge";
+
+const result = mergeFiltered(
+  {
+    excludes: ["name"],
+    mergeMap: {
+      user: { name: moveField("name") }
+    }
+  },
+  { name: "张三" },
+  { user: { name: "" } }
+);
+// { user: { name: "张三" } }
+```
+
+`mergeMap` entries win over `excludes` for the same path, so `user.name` is still
+processed even though `name` is excluded at the root.
 
 
 ## Testing

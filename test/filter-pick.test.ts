@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { merge, pick, filter, road, Strategy } from "../src/index.js";
+import { merge, pick, filter, road, Strategy, moveField, mergeFiltered } from "../src/index.js";
 
 describe("pick (filter via include/exclude)", () => {
   it("keeps everything by default", () => {
@@ -80,5 +80,66 @@ describe("filter inside a merge", () => {
       { config: { theme: "local", other: "local" } }
     );
     expect(out).toEqual({ config: { theme: "local", other: "remote" } });
+  });
+
+  it("gives mergeMap priority over excludes and supports moveField relocation", () => {
+    const out = merge(
+      {
+        dumbNode: filter({
+          excludes: ["name"],
+          mergeMap: {
+            user: {
+              name: moveField("dumbNode.name"),
+            },
+          },
+        }),
+      },
+      { dumbNode: { name: "张三" } },
+      { dumbNode: { user: { name: "" } } }
+    );
+    expect(out).toEqual({ dumbNode: { user: { name: "张三" } } });
+  });
+});
+
+describe("mergeFiltered", () => {
+  it("merges with excludes while keeping other fields by default", () => {
+    const out = mergeFiltered(
+      { excludes: ["password"] },
+      { theme: "dark", password: "remote" },
+      { theme: "light", password: "local" }
+    );
+    expect(out).toEqual({ theme: "dark", password: "local" });
+  });
+
+  it("merges with relative moveField paths under internal dumbNode scope", () => {
+    const out = mergeFiltered(
+      {
+        excludes: ["name"],
+        mergeMap: {
+          user: {
+            name: moveField("name"),
+          },
+        },
+      },
+      { name: "张三" },
+      { user: { name: "" } }
+    );
+    expect(out).toEqual({ user: { name: "张三" } });
+  });
+});
+
+describe("relax drills by own shape", () => {
+  it("drills into own-side nested path when remote only has a flat sibling field", () => {
+    const out = merge(
+      {
+        node: filter({
+          excludes: ["name"],
+          mergeMap: { user: { name: moveField("node.name") } },
+        }),
+      },
+      { node: { name: "张三" } },
+      { node: { user: { name: "" } } }
+    );
+    expect(out).toEqual({ node: { user: { name: "张三" } } });
   });
 });

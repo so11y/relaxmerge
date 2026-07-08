@@ -1,8 +1,9 @@
 import { isNumber, isObject } from "lodash-es";
 import { MergeMap, Strategy } from "../types.js";
+import { MergeCtx } from "./ctx.js";
 import { FieldConfig } from "../utils/mergeState.js";
 import { MergeNode } from "../helpers/node.js";
-import { Frame } from "./frame.js";
+import { SiteNav } from "./site.js";
 
 /** field 是否是一个「过滤器」（能逐字段裁决子 spec）。 */
 export const filterOf = (field?: FieldConfig) => (field && field.resolveChild ? field : undefined);
@@ -21,8 +22,9 @@ export interface Resolved {
   field?: FieldConfig;
 }
 
-export function resolve(frame: Frame): Resolved {
-  const { spec, path, inheritedMode, enclosed, ctx } = frame;
+export function resolve(ctx: MergeCtx, nav: SiteNav): Resolved {
+  const { spec, path, kind, mode: inheritedMode } = nav;
+  const enclosed = kind === "picked";
   if (spec instanceof MergeNode) {
     const field = spec.mount(ctx.state, path);
     return { mode: spec.mode, submap: (spec.mergeMap ?? undefined) as MergeMap | undefined, field };

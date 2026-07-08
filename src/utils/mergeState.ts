@@ -32,7 +32,7 @@ export type FieldConfig = {
  *                   已改为沿递归返回值传递。
  *
  * 引擎的当前模式、字段配置、过滤器等信息都作为参数在递归中显式传递
- * （见 core/merge.ts 的 Frame），递归天然构成栈，运行时无 path→config 搭桥。
+ * （见 core/merge.ts 的 MergeCtx / site 快照），递归天然构成栈，运行时无 path→config 搭桥。
  */
 export function createMergeState() {
   return {

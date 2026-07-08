@@ -37,4 +37,15 @@ describe("moveField", () => {
   it("returns own value when both source and configValue are nil", () => {
     expect(merge({ dest: moveField("nope") }, {}, { dest: 99 })).toEqual({ dest: 99 });
   });
+
+  it("resolves beforePath relative to options.context.scope", () => {
+    expect(
+      merge(
+        { pkg: { dest: moveField("name") } },
+        { pkg: { name: "from-scope", dest: 0 } },
+        { pkg: { dest: 1 } },
+        { context: { scope: "pkg" } }
+      )
+    ).toEqual({ pkg: { dest: "from-scope" } });
+  });
 });
