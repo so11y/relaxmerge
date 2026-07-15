@@ -31,7 +31,7 @@
     "type": "git",
     "url": "git+https://github.com/so11y/relaxmerge.git"
   },
-  "homepage": "https://github.com/so11y/relaxmerge#readme",
+  "homepage": "https://relaxmerge-playground.swoony-tuna-0567.chatgpt.site",
   "license": "MIT",
   "scripts": {
     "build": "vite build",
