@@ -1,7 +1,6 @@
 import { get, has, isArray, isNil, isObject, isUndefined, merge as deepMerge, set } from "lodash-es";
 import { MergeMap, MergeOptions, Strategy } from "../types.js";
 import { DROP } from "../utils/mergeState.js";
-import { isSameType } from "../utils/index.js";
 import { EnterNested, MergeCtx } from "./ctx.js";
 import {
   inheritedSite,
@@ -121,7 +120,12 @@ function writeLeaf(ctx: MergeCtx, site: MergeSite) {
 
   if (!ownHasPath && isArrayIter === false) return;
   if (ownHasPath && !has(config, path)) return;
-  if (!isNil(od) && !isNil(cd) && !isSameType(cd, od)) return;
+  if (
+    ctx.options.sameTypeOnly &&
+    !isNil(od) &&
+    !isNil(cd) &&
+    Object.prototype.toString.call(cd) !== Object.prototype.toString.call(od)
+  ) return;
 
   const strict = mode === Strategy.Strict;
   const relax = mode === Strategy.Relax;

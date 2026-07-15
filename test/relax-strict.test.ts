@@ -47,12 +47,17 @@ describe("array handling", () => {
       a: [9, 2, 3],
     });
   });
+  it("relax overwrites array items regardless of their existing types", () => {
+    expect(merge({ a: Strategy.Relax }, { a: [333, 2] }, { a: ["search"] })).toEqual({
+      a: [333, 2],
+    });
+  });
 });
 
-describe("type mismatch and nil values", () => {
-  it("skips when own and config leaf types differ", () => {
+describe("replacement and nil values", () => {
+  it("overwrites when own and config leaf types differ", () => {
     expect(merge({ a: Strategy.Strict }, { a: { k: "str" } }, { a: { k: 1 } })).toEqual({
-      a: { k: 1 },
+      a: { k: "str" },
     });
   });
   it("relax overwrites a null own value", () => {
@@ -63,10 +68,33 @@ describe("type mismatch and nil values", () => {
       merge({ a: Strategy.Strict }, { a: { k: 1 } }, { a: { k: undefined } })
     ).toEqual({ a: { k: 1 } });
   });
-  it("skips when own is a scalar leaf but config is an object", () => {
+  it("overwrites a scalar leaf with a config object", () => {
     expect(
       merge({ a: Strategy.Strict }, { a: { k: {} } }, { a: { k: 5 } })
-    ).toEqual({ a: { k: 5 } });
+    ).toEqual({ a: { k: {} } });
+  });
+  it.each([Strategy.Strict, Strategy.Relax])(
+    "preserves the own value for strategy %s when sameTypeOnly is enabled",
+    (strategy) => {
+      expect(
+        merge(
+          { a: strategy },
+          { a: { k: "remote" } },
+          { a: { k: 1 } },
+          { sameTypeOnly: true }
+        )
+      ).toEqual({ a: { k: 1 } });
+    }
+  );
+  it("reproduces the 1.x array behavior when sameTypeOnly is enabled", () => {
+    expect(
+      merge(
+        { a: Strategy.Relax },
+        { a: [333, 2] },
+        { a: ["search"] },
+        { sameTypeOnly: true }
+      )
+    ).toEqual({ a: ["search", 2] });
   });
 });
 

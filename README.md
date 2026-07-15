@@ -179,7 +179,11 @@ Selectively pull fields from `config` into `own`.
 merge({ a: Strategy.Replace }, { a: 1 }, { a: 2 }); // { a: 1 }
 ```
 
-`options`: `{ callback?(key, value): void; state?: MergeState; context?: { scope?: string } }`.
+`options`: `{ callback?(key, value): void; sameTypeOnly?: boolean; state?: MergeState; context?: { scope?: string } }`.
+
+`sameTypeOnly` defaults to `false`. Set it to `true` to preserve the 1.x behavior:
+when both values are non-null, a different runtime type keeps the value from
+`own`. Use `Skip` or `customize` for field-specific decisions.
 
 `context.scope` is used by helpers such as `mergeFiltered` so `moveField` can
 resolve **relative** source paths (see below).
@@ -571,4 +575,3 @@ npm run build      # vite library build -> dist/
 npm run typecheck  # tsc --noEmit
 npm test
 ```
-

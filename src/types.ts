@@ -62,6 +62,8 @@ export enum Strategy {
 
 export interface MergeOptions {
   callback?: (key: string, value: any) => void;
+  /** 仅当两侧非空值类型相同时才覆盖，用于兼容 1.x 行为。 */
+  sameTypeOnly?: boolean;
   state?: MergeState;
   context?: MergeCallContext;
 }
